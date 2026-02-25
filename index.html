@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BI Photo Search</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --accent:       #002aff;
+      --accent-hover: #1a3fff;
+      --text:         #0a0a0a;
+      --text-muted:   #76767a;
+      --surface:      #f5f5f5;
+      --surface-2:    #ebebeb;
+      --border:       #d8d8d8;
+      --radius:       10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Work Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+      padding: 36px 40px;
+      max-width: 600px;
+      width: 100%;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 4px;
+    }
+
+    .bi-logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    h1 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.3px;
+    }
+
+    .subtitle {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 28px;
+      margin-top: 4px;
+    }
+
+    /* ── Sources ── */
+    .sources {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 26px;
+      flex-wrap: wrap;
+    }
+
+    .source-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 0.85rem;
+      color: #333;
+    }
+
+    .source-toggle input[type="checkbox"] {
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .dot-ap      { background: #cc0000; }
+    .dot-getty   { background: #0057b8; }
+    .dot-reuters { background: #ff8000; }
+
+    /* ── Section labels ── */
+    .section-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+
+    /* ── Divider ── */
+    .divider {
+      border: none;
+      border-top: 1px solid #eee;
+      margin: 22px 0;
+    }
+
+    /* ── Story type picker ── */
+    .story-type-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .story-type-btn {
+      flex: 1;
+      padding: 6px 10px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.12s;
+      white-space: nowrap;
+    }
+
+    .story-type-btn:hover {
+      border-color: #aaa;
+      color: var(--text);
+    }
+
+    .story-type-btn.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    /* ── Suggestion panel ── */
+    .suggest-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    textarea {
+      flex: 1;
+      padding: 10px 14px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      outline: none;
+      resize: none;
+      height: 64px;
+      line-height: 1.45;
+      transition: border-color 0.15s;
+      color: #111;
+    }
+
+    textarea::placeholder { color: #bbb; }
+    textarea:focus { border-color: #555; }
+
+    .suggest-btn {
+      padding: 0 18px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+      align-self: stretch;
+      font-family: inherit;
+    }
+
+    .suggest-btn:hover  { background: var(--accent-hover); }
+    .suggest-btn:active { background: #001acc; }
+    .suggest-btn:disabled { background: #ccc; cursor: default; }
+
+
+    /* ── Chips ── */
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+      min-height: 0;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 13px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 0.82rem;
+      color: var(--text);
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s, color 0.12s, transform 0.1s;
+      user-select: none;
+      font-family: inherit;
+    }
+
+    .chip:hover {
+      background: #1a1a1a;
+      color: #fff;
+      border-color: #1a1a1a;
+    }
+
+    .chip:active { transform: scale(0.97); }
+
+    /* Subtle tint to distinguish chip types */
+    .chip-generic {
+      border-color: #d8e4f0;
+      background: #f4f8fc;
+    }
+
+    .chip-conceptual {
+      border-color: #e2d8f0;
+      background: #f7f4fc;
+    }
+
+    .chip-arrow {
+      font-size: 0.7rem;
+      opacity: 0.45;
+    }
+
+    .chip-verify {
+      border-style: dashed;
+      border-color: #e0c060;
+      background: #fffdf0;
+    }
+
+    .chip-verify-icon {
+      font-size: 0.7rem;
+      opacity: 0.7;
+    }
+
+    /* ── Chip source dots ── */
+    .chip-sources {
+      display: inline-flex;
+      gap: 2px;
+      align-items: center;
+      margin-right: 3px;
+    }
+
+    .chip-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      opacity: 0.45;
+    }
+
+    .chip-dot-ap      { background: #cc0000; }
+    .chip-dot-getty   { background: #0057b8; }
+    .chip-dot-reuters { background: #ff8000; }
+
+    /* Recent only toggle */
+    .recent-toggle {
+      color: #aaa;
+      font-size: 0.8rem;
+    }
+
+    /* ── More row ── */
+    .more-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .more-btn {
+      font-size: 0.75rem;
+      color: #888;
+      background: none;
+      border: 1px solid #e0e0e0;
+      border-radius: 5px;
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: color 0.12s, border-color 0.12s, background 0.12s;
+    }
+
+    .more-btn:hover { color: #111; border-color: #aaa; background: #f5f5f5; }
+    .more-btn:disabled { opacity: 0.4; cursor: default; }
+    .more-btn-mid { flex: 1; }
+    .more-btn-openall { border-color: #bbb; color: #444; }
+    .more-btn-openall:hover { color: #000; border-color: #555; }
+
+    /* ── No-key notice ── */
+    .no-key-notice {
+      font-size: 0.82rem;
+      color: #aaa;
+      margin-top: 10px;
+    }
+
+    .no-key-notice a { color: #555; text-decoration: underline; cursor: pointer; }
+
+    /* ── Direct search ── */
+    .search-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 10px 14px;
+      font-size: 0.95rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input[type="text"]:focus { border-color: #555; }
+
+    .search-btn {
+      padding: 10px 22px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+      font-family: inherit;
+    }
+
+    .search-btn:hover  { background: var(--accent-hover); }
+    .search-btn:active { background: #001acc; }
+
+    /* ── Status ── */
+    .status {
+      margin-top: 12px;
+      font-size: 0.82rem;
+      min-height: 18px;
+      color: #3aaa5c;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      margin-top: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .popup-note { font-size: 0.77rem; color: #ccc; line-height: 1.5; }
+
+    .settings-link {
+      font-size: 0.75rem;
+      color: #bbb;
+      cursor: pointer;
+      white-space: nowrap;
+      padding-left: 12px;
+      flex-shrink: 0;
+    }
+
+    .settings-link:hover { color: #555; }
+
+    /* ── Settings Modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: #fff;
+      border-radius: 10px;
+      padding: 28px 32px;
+      max-width: 440px;
+      width: 90%;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    }
+
+    .modal h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+
+    .modal-section-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #bbb;
+      margin-bottom: 6px;
+    }
+
+    .modal-hint {
+      font-size: 0.8rem;
+      color: #aaa;
+      margin-bottom: 8px;
+      line-height: 1.45;
+    }
+
+    .modal-hint a { color: #666; }
+
+    .modal input[type="password"],
+    .modal textarea.style-input {
+      width: 100%;
+      padding: 9px 12px;
+      font-size: 0.875rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      outline: none;
+      font-family: inherit;
+      line-height: 1.45;
+    }
+
+    .modal input[type="password"] {
+      font-family: monospace;
+      margin-bottom: 20px;
+    }
+
+    .modal textarea.style-input {
+      resize: vertical;
+      min-height: 90px;
+      margin-bottom: 20px;
+    }
+
+    .modal input[type="password"]:focus,
+    .modal textarea.style-input:focus { border-color: #555; }
+
+    .modal-btns {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .btn-cancel {
+      padding: 8px 16px;
+      background: #fff;
+      color: #555;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .btn-cancel:hover { border-color: #aaa; color: #111; }
+
+    .btn-save {
+      padding: 8px 16px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .btn-save:hover { background: var(--accent-hover); }
+  </style>
+</head>
+<body>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <h2>Settings</h2>
+
+      <p class="modal-section-label">Claude API Key</p>
+      <p class="modal-hint">
+        Stored only in your browser. Sent directly to Anthropic — nowhere else.
+        Get a key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>.
+      </p>
+      <input type="password" id="key-input" placeholder="sk-ant-…">
+
+      <p class="modal-section-label">Style Preferences</p>
+      <p class="modal-hint">Describe what good photos look like for your publication. This shapes every suggestion.</p>
+      <textarea class="style-input" id="style-input" rows="4"></textarea>
+
+      <div class="modal-btns">
+        <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+        <button class="btn-save" onclick="saveSettings()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main card -->
+  <div class="card">
+    <h1>Photo Search Assistant</h1>
+    <p class="subtitle">AI-suggested search terms from a headline, or search directly. Make sure you're logged in to each source first.</p>
+
+    <!-- Sources -->
+    <div class="sources">
+      <label class="source-toggle">
+        <input type="checkbox" id="chk-ap" checked>
+        <span class="dot dot-ap"></span> AP Newsroom
+      </label>
+      <label class="source-toggle">
+        <input type="checkbox" id="chk-getty" checked>
+        <span class="dot dot-getty"></span> Getty Images
+      </label>
+      <label class="source-toggle">
+        <input type="checkbox" id="chk-reuters" checked>
+        <span class="dot dot-reuters"></span> Reuters Connect
+      </label>
+      <label class="source-toggle recent-toggle">
+        <input type="checkbox" id="chk-recent">
+        Recent only
+      </label>
+    </div>
+
+    <!-- Suggest from headline -->
+    <p class="section-label">Suggest from headline</p>
+
+    <div class="story-type-row">
+      <button class="story-type-btn active" data-type="news" onclick="setStoryType('news', this)">News</button>
+      <button class="story-type-btn" data-type="lifestyle" onclick="setStoryType('lifestyle', this)">Lifestyle</button>
+      <button class="story-type-btn" data-type="feature" onclick="setStoryType('feature', this)">Features &amp; Trends</button>
+    </div>
+
+    <div class="suggest-row">
+      <textarea id="headline" placeholder="Paste a headline or story idea…"></textarea>
+      <button class="suggest-btn" id="suggest-btn" onclick="suggestTerms()">Suggest</button>
+    </div>
+
+    <div class="chips" id="chips"></div>
+    <div class="more-row" id="more-row" style="display:none">
+      <button class="more-btn more-btn-openall" onclick="openAllChips()">Open all ↗</button>
+      <button class="more-btn" onclick="suggestTerms('specific')">↑ Wire/news</button>
+      <button class="more-btn more-btn-mid" onclick="suggestTerms('balanced')">More suggestions</button>
+      <button class="more-btn" onclick="suggestTerms('generic')">↑ Illustrative</button>
+      <button class="more-btn" onclick="suggestTerms('conceptual')">↑ Conceptual</button>
+    </div>
+
+    <div id="no-key-notice" class="no-key-notice" style="display:none">
+      <a onclick="openModal()">Add a Claude API key</a> to enable suggestions.
+    </div>
+
+    <hr class="divider">
+
+    <!-- Direct search -->
+    <p class="section-label">Search directly</p>
+
+    <div class="search-row">
+      <input type="text" id="query" placeholder="e.g. hurricane relief workers">
+      <button class="search-btn" onclick="doSearch()">Search</button>
+    </div>
+
+    <div class="status" id="status"></div>
+
+    <div class="footer">
+      <span class="popup-note">Allow pop-ups for this page if tabs don't open.</span>
+      <a class="settings-link" onclick="openModal()" id="settings-label">⚙ Settings</a>
+    </div>
+  </div>
+
+  <script>
+    // ── Storage keys ─────────────────────────────────────────────────────────
+    const KEY_STORAGE      = 'wire_photo_claude_key';
+    const STYLE_STORAGE    = 'wire_photo_style_prefs';
+
+    // ── Default style prefs (used until user saves their own) ─────────────────
+    const DEFAULT_STYLE_PREFS =
+`PUBLICATION: Business publication for ambitious professionals navigating modern work and money.
+
+BEATS WE COVER:
+- Workplace: AI at work, leadership, compensation, return-to-office, DEI
+- Big tech; finance (banks, hedge funds, private equity); professional services (consulting, accounting, law)
+- Side hustles, gig economy, influencers, and creators
+- Trump, DOGE, federal workers, kitchen-table economics, the Trump trade
+- Innovation in warfare: weapons, military technology, strategy, and service
+- Lifestyle: status symbols, spending trends, relocation
+
+VISUAL QUALITY:
+- Images should feel editorial and natural — as unposed as possible
+- News/wire: prefer clean, uncluttered backgrounds with a clear focal point. Simple, direct, and strong
+- Creative/stock: should feel like real people in real places — natural lighting, natural poses and expressions. Nothing staged or obviously stock-like
+- For abstract or hard-to-illustrate topics (AI, policy, economics, non-visual stories): push toward something specific and unexpected rather than the obvious cliché. "Fed-up office worker", "person staring at laptop", and generic "team in a meeting room" shots are overused — look for something more considered, specific, or visually surprising
+
+COMPOSITION:
+- Horizontal or square images strongly preferred. We crop to 4:3 and 2:1, so strong central subjects and clean compositions work best
+- Avoid images where the key subject is at the far edge of the frame
+
+PEOPLE & CELEBRITIES:
+- For named public figures and celebrities, prefer recent images (last 1–2 years where possible)
+- Avoid step-and-repeat/red carpet backgrounds — prefer candid moments, speaking engagements, or environmental portraits
+- Clean or simple backgrounds preferred over busy or chaotic ones
+
+THINGS TO AVOID:
+- Handshakes, light bulbs, people pointing at whiteboards or screens
+- Generic "team meeting" or "busy open office" shots
+- Hard hats unless the story is literally about construction or manufacturing
+- Aerial city shots used as filler
+- Overly posed or "stock face" expressions
+- Step-and-repeat / red carpet backdrops
+- Stock illustrations of charts, graphs, arrows, or abstract financial symbols — these are not photography and should never be suggested
+- Generic "stock market crash" graphics or 3D render-style financial imagery
+
+FOR ABSTRACT FINANCIAL OR MARKET STORIES:
+Think real places with atmosphere rather than literal illustration. A photo of the NYSE exterior on a grey winter day conveys "crash" or "downturn" far better than a generic stock chart. Federal Reserve building, Wall Street street sign, a quiet trading floor, an empty office corridor — real editorial locations that carry mood and context are always preferred over abstract financial stock imagery.
+
+GOOD EXAMPLES OF THE RIGHT FEEL:
+- NYSE exterior in winter/overcast conditions for a recession or crash story — real, editorial, atmospheric, and conceptually resonant
+- A still life of a woman holding up a pair of jeans — art-directed but feels real, works for a fashion/consumer trend story
+- For an AI career story: a close-up of hands on a keyboard, or a more abstract but visually considered angle — not a stressed worker at a glowing screen
+- Overhead shot of a hand holding house keys, feet visible on concrete below — no couple, no faces, the object tells the whole story. Found via "millennial couple house keys" for a homebuying trend story. The best result wasn't literal.
+- Midsection crop of a woman in a professional grey coat holding a luxury green bag, shot on a street — no face, editorial feel, the intersection of two worlds (career + luxury) in one frame. Found via "professional woman designer handbag" for a story about whether luxury goods affect career perception.
+- Phone held up close showing a dating app, shot from behind over the shoulder, dark jacket, almost editorial in feel — no face, clean composition. Found via "smartphone dating app over shoulder" for a dating trends story.
+- Candid bar scene with motion blur, warm light streaks, group of young people, no one looking at camera — grainy, authentic late-night energy, feels genuinely shot not staged. Found via "young people dive bar" for a Gen Z nightlife trend story.`;
+
+    function getStylePrefs() {
+      return localStorage.getItem(STYLE_STORAGE) || DEFAULT_STYLE_PREFS;
+    }
+
+    // ── Settings modal ────────────────────────────────────────────────────────
+    function getKey() { return localStorage.getItem(KEY_STORAGE) || ''; }
+
+    function openModal() {
+      document.getElementById('key-input').value = getKey();
+      document.getElementById('style-input').value = getStylePrefs();
+      document.getElementById('modal').classList.add('open');
+      setTimeout(function() { document.getElementById('key-input').focus(); }, 50);
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.remove('open');
+    }
+
+    function saveSettings() {
+      const k = document.getElementById('key-input').value.trim();
+      const s = document.getElementById('style-input').value.trim();
+      if (k) localStorage.setItem(KEY_STORAGE, k);
+      if (s) localStorage.setItem(STYLE_STORAGE, s);
+      updateKeyUI();
+      closeModal();
+      setStatus('Settings saved.', '#3aaa5c');
+    }
+
+    function updateKeyUI() {
+      const hasKey = !!getKey();
+      document.getElementById('no-key-notice').style.display = hasKey ? 'none' : 'block';
+      document.getElementById('settings-label').textContent = '⚙ Settings';
+    }
+
+    document.getElementById('modal').addEventListener('click', function(e) {
+      if (e.target === this) closeModal();
+    });
+
+    document.getElementById('key-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    // ── Story type ────────────────────────────────────────────────────────────
+    let currentStoryType = 'news';
+
+    function setStoryType(type, btn) {
+      currentStoryType = type;
+      document.querySelectorAll('.story-type-btn').forEach(function(b) {
+        b.classList.toggle('active', b === btn);
+      });
+    }
+
+    const STORY_TYPE_INSTRUCTIONS = {
+      news:      `NEWS: Straight news story, including breaking corporate, financial, or political news. Heavily favour Type A — named people, real organisations, specific locations and events. Aim for 3–4 Type A. Include Type C (mood-based real locations) only if no clear person or event is the visual subject.`,
+      lifestyle: `LIFESTYLE: Personal finance, health, parenting, consumer, or relationships story. Favour Type B and C — warm, human, real-feeling imagery with natural poses and everyday settings. Type C terms should feel warm and grounded, not moody or dramatic. Exception: if the story references a real news event, named disaster, storm, crisis, or current emergency — even if the framing is personal — include 1–2 Type A terms for the event itself (e.g. the storm name, the affected location, the crisis). Wire photos of the actual event often make the strongest lead image even for a first-person lifestyle piece.`,
+      feature:   `FEATURES & TRENDS: Longer-form story about a societal, business, or cultural trend. Mix all three types freely. Lean into mood-based Type C terms — think about the emotional register of the story and find real places, objects, or scenes that carry that feeling. A story about economic anxiety should feel different visually from a story about an emerging opportunity.`
+    };
+
+    // ── Suggest terms ─────────────────────────────────────────────────────────
+    let lastTerms    = []; // plain strings, used to avoid repeats
+    let currentItems = []; // full item objects, used for "open all"
+
+    const BIAS_INSTRUCTIONS = {
+      specific:    `This time, return ALL 5 as Type A (specific named people, real company names, and real places). No generic or conceptual terms.`,
+      generic:     `This time, return ALL 5 as Type B (generic/stock illustrative concepts). No named individuals, no Type A or Type C.`,
+      conceptual:  `This time, return ALL 5 as Type C (mood-based conceptual — real locations with atmosphere, still lifes, flat lays, close-up textures, objects that carry emotional weight). Think about the story's mood and encode it into the search term. No wire photos, no generic illustrative people, absolutely no charts or stock illustrations.`,
+      balanced:    `Choose the right mix across all three types for the story as described above.`
+    };
+
+    async function suggestTerms(bias) {
+      bias = bias || 'balanced';
+      const headline = document.getElementById('headline').value.trim();
+      if (!headline) { document.getElementById('headline').focus(); return; }
+
+      const key = getKey();
+      if (!key) { openModal(); return; }
+
+      const btn = document.getElementById('suggest-btn');
+      btn.textContent = 'Thinking…';
+      btn.disabled = true;
+      document.querySelectorAll('.more-btn').forEach(function(b) { b.disabled = true; });
+      setStatus('');
+      renderChips([]);
+
+      const previousNote = lastTerms.length
+        ? '\nAlready suggested (do not repeat): ' + lastTerms.map(function(t) { return '"' + t + '"'; }).join(', ') + '.'
+        : '';
+
+      try {
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': key,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-5',
+            max_tokens: 900,
+            system: `You are a photo editor at a business publication with deep, current knowledge of executives, politicians, and public figures worldwide.
+Today's date is ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}. Your training data has a cutoff, so named individuals who took on a new role in approximately the last 12 months may be outdated or unknown to you. When you are not confident a named person is still in the role you are attributing to them, set "verify": true on that item so the user knows to double-check.
+
+For each headline, return exactly 5 search terms across two types — choose the right balance for the story:
+
+TYPE A — SPECIFIC (wire/editorial): A real named person, place, or event a wire photographer would have shot.
+  - Always use full proper nouns: real company names, real person names, real place names.
+  - NEVER use a generic category when the specific name is known. Say "Netflix headquarters" not "streaming service headquarters". Say "Ted Sarandos" not "streaming executive".
+  - If a company is mentioned, use your knowledge to name its actual key executives. If a name isn't in the headline, infer who the key figure is and use their real name.
+  - When multiple named people appear in the same headline, don't waste chips on them individually — combine people with the shared location or context (e.g. "Zuckerberg Miami", "Larry Page Miami"). If the story is about them as a group, try combining two names (e.g. "Zuckerberg Brin") to surface group shots or related coverage. Individual name-only chips are a last resort when there's no shared context to combine with.
+  - For tech executives and business leaders, suggest BOTH the plain name AND a setting-modified version as two separate chips — e.g. "Dario Amodei" and "Dario Amodei keynote". The plain name gives breadth; the modified version ("speaking", "keynote", "interview", or "conference") surfaces cleaner, better-composed images with less cluttered backgrounds.
+  - For celebrities, entertainers, and athletes in NEWS stories: name alone is fine — you want recent event coverage.
+  - For celebrities, entertainers, and athletes in LIFESTYLE or FEATURE stories: add a portrait-friendly modifier to avoid step-and-repeat/event shots and surface more editorial, considered imagery. Use "portrait", "outside", "candid", or "editorial" — e.g. "JoJo Siwa portrait" or "JoJo Siwa outside" rather than "JoJo Siwa" alone. Suggest both the plain name and a modified version as separate chips so the user has both options.
+  - NEVER append meta-descriptors like "archive", "historical", "file photo", or "vintage" to a Type A term. Getty searches by subject, not image age — just the person or place name is sufficient and will surface all available imagery including archival.
+  - Opens AP Newsroom, Getty Editorial, and Reuters Connect.
+
+TYPE B — GENERIC (illustrative stock): A broad visual concept for stories better shown with people doing things.
+  - Good for trend, macro, or abstract angles (e.g. "tech worker at computer back view", "stock market floor traders", "supply chain warehouse worker").
+  - Feel editorial, not staged — no handshakes, no light bulbs, no people pointing at whiteboards.
+  - When a story is fundamentally about the intersection or juxtaposition of two worlds, combine both elements into a single term rather than suggesting each one separately. A story about luxury goods and career perception should produce "professional woman designer bag" or "woman luxury handbag office" — not "designer bag" and "office worker" as two separate chips. The combination is what makes the image tell the story.
+  - For any term that would typically show a person's face, naturally weave in a face-avoiding modifier. Stack two spatial modifiers for stronger results — single modifiers like "over shoulder" alone still return face-forward shots. Prefer combinations: "over shoulder from back", "back view walking away", "from behind looking out", "unrecognizable from behind". Do NOT add these to Type A terms.
+  - Opens Getty Creative only.
+
+TYPE C — CONCEPTUAL/MOOD-BASED: Imagery that expresses the story's emotional register through real objects, places, textures, or scenes. Two valid approaches — choose whichever fits the story:
+
+  TRACK 1 — ATMOSPHERIC LOCATION: A real, recognisable place photographed in conditions that carry the story's mood.
+    - Think: what real location is associated with this story's world? Then add a single atmospheric modifier.
+    - The modifier does the emotional work — season, weather, lighting, emptiness:
+        "Wall Street winter" → downturn/cold
+        "Federal Reserve building fog" → uncertainty/opacity
+        "empty trading floor" → downturn/aftermath
+        "Silicon Valley office night" → overwork/pressure
+    - Keep to 2–4 words. Getty's search works best short — "Wall Street snow" beats "NYSE exterior on a grey overcast winter morning".
+    - These shots exist in Getty Editorial, so this type searches all of Getty (editorial + creative).
+
+  TRACK 2 — ART-DIRECTED OBJECT/STILL LIFE: A composed, close-up, or flat-lay image of an object or texture that represents the story's subject.
+    - Good for consumer, lifestyle, and trend stories where the subject is physical:
+        "crumpled dollar bills" → financial stress
+        "jeans folded table" → fashion/consumer trend
+        "hands keyboard overhead" → AI/work (without cliché)
+        "prescription bottles counter" → healthcare costs
+    - Keep to 2–4 words. Subject noun + one style or condition word.
+    - Can include people if clearly art-directed ("woman holding jeans", "hands counting cash") — composed, not candid.
+
+  NEVER suggest: charts, graphs, arrows, data visualisations, abstract financial symbols, 3D renders, or stock illustrations of any kind.
+  Searches all of Getty (editorial + creative). Skips AP and Reuters.
+
+Story type context: ${STORY_TYPE_INSTRUCTIONS[currentStoryType]}
+
+Bias instruction: ${BIAS_INSTRUCTIONS[bias]}
+
+Each term must be 1–6 words and work as a literal search query on AP, Getty, or Reuters.
+Style context: ${getStylePrefs()}
+
+Return ONLY a valid JSON array of exactly 5 objects with these fields:
+  "term"   – the search string (1–6 words)
+  "type"   – "specific", "generic", or "conceptual"
+  "reason" – one short sentence (max 12 words) explaining what image this finds and why it fits
+  "verify" – true if this is a named person whose current role you are not fully confident about (omit or false otherwise)
+
+Example: [{"term":"Ted Sarandos","type":"specific","reason":"Netflix co-CEO, likely in earnings or press conference coverage."},{"term":"office worker laptop from behind","type":"generic","reason":"Illustrative of remote work without showing a face."},{"term":"Carlos Tavares","type":"specific","reason":"Former Stellantis CEO — verify if still current.","verify":true}]
+No explanation, no markdown, no code fences.`,
+            messages: [
+              { role: 'user', content: 'Headline: "' + headline + '"' + previousNote }
+            ]
+          })
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(function() { return {}; });
+          throw new Error(err?.error?.message || 'API error ' + res.status);
+        }
+
+        const data = await res.json();
+        const raw = (data?.content?.[0]?.text || '').trim();
+        const jsonMatch = raw.match(/\[[\s\S]*\]/);
+        const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
+
+        if (!Array.isArray(parsed) || parsed.length === 0) throw new Error('No suggestions returned.');
+
+        // Normalise: accept either {term,type,reason,verify} objects or plain strings (fallback)
+        const items = parsed.map(function(item) {
+          if (typeof item === 'string') return { term: item, type: 'specific', reason: '', verify: false };
+          const t = item.type === 'generic' ? 'generic' : item.type === 'conceptual' ? 'conceptual' : 'specific';
+          return { term: String(item.term), type: t, reason: String(item.reason || ''), verify: !!item.verify };
+        });
+
+        lastTerms = lastTerms.concat(items.map(function(i) { return i.term; })).slice(-15);
+        renderChips(items);
+        setStatus('');
+
+      } catch (err) {
+        setStatus('Error: ' + err.message, '#cc4400');
+      } finally {
+        btn.textContent = 'Suggest';
+        btn.disabled = false;
+        document.querySelectorAll('.more-btn').forEach(function(b) { b.disabled = false; });
+      }
+    }
+
+    function renderChips(items) {
+      const container = document.getElementById('chips');
+      const moreRow   = document.getElementById('more-row');
+      container.innerHTML = '';
+
+      if (!items || items.length === 0) {
+        currentItems = [];
+        moreRow.style.display = 'none';
+        return;
+      }
+
+      currentItems = items;
+
+      items.forEach(function(item) {
+        const chip = document.createElement('button');
+        const typeClass = item.type === 'generic' ? ' chip-generic'
+                        : item.type === 'conceptual' ? ' chip-conceptual'
+                        : '';
+        const verifyClass = item.verify ? ' chip-verify' : '';
+        chip.className = 'chip' + typeClass + verifyClass;
+
+        // Source dots: wire chips get AP+Getty+Reuters, others get Getty only
+        const isWire = item.type !== 'generic' && item.type !== 'conceptual';
+        const dotsHtml = '<span class="chip-sources">'
+          + (isWire ? '<span class="chip-dot chip-dot-ap"></span>' : '')
+          + '<span class="chip-dot chip-dot-getty"></span>'
+          + (isWire ? '<span class="chip-dot chip-dot-reuters"></span>' : '')
+          + '</span>';
+
+        const verifyIcon = item.verify ? ' <span class="chip-verify-icon">⚠</span>' : '';
+        chip.innerHTML = dotsHtml + item.term + verifyIcon + ' <span class="chip-arrow">↗</span>';
+
+        const dest = item.type === 'generic'    ? 'Getty Creative'
+                   : item.type === 'conceptual' ? 'Getty (Editorial + Creative)'
+                   :                              'AP · Getty Editorial · Reuters';
+        const reasonText = item.verify
+          ? '⚠ Verify still current — ' + (item.reason || 'role may have changed since model training')
+          : item.reason;
+        chip.title = (reasonText ? reasonText + '  →  ' : '') + dest
+          + '\nCmd/Ctrl+click to copy term';
+
+        chip.addEventListener('click', function(e) {
+          if (e.metaKey || e.ctrlKey) {
+            // Copy term to clipboard without opening tabs
+            navigator.clipboard.writeText(item.term).then(function() {
+              setStatus('Copied: ' + item.term, '#888');
+              setTimeout(function() { setStatus(''); }, 1800);
+            });
+            return;
+          }
+          document.getElementById('query').value = item.term;
+          openSources(item.term, item.type);
+          setStatus('Searching: ' + item.term, '#3aaa5c');
+        });
+        container.appendChild(chip);
+      });
+
+      moreRow.style.display = 'flex';
+    }
+
+    // Reset when headline changes
+    document.getElementById('headline').addEventListener('input', function() {
+      lastTerms = [];
+      renderChips([]);
+    });
+
+    // Enter (without Shift) triggers suggest
+    document.getElementById('headline').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        suggestTerms();
+      }
+    });
+
+    // ── Direct search ─────────────────────────────────────────────────────────
+    document.getElementById('query').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') doSearch();
+    });
+
+    function doSearch() {
+      const q = document.getElementById('query').value.trim();
+      if (!q) { document.getElementById('query').focus(); return; }
+      const opened = openSources(q, null);
+      if (opened.length) setStatus('Opened: ' + opened.join(', '), '#3aaa5c');
+    }
+
+    // termType: 'specific'    → AP + Reuters + Getty Editorial (sorted recent)
+    //           'generic'     → Getty Creative only
+    //           'conceptual'  → Getty all (editorial + creative)
+    //           null          → all sources, Getty both families
+
+    // Builds a Getty URL with appropriate family filter + optional recency sort.
+    // Type A always sorts by most recent; others sort by most recent if "Recent only" is checked.
+    function buildGettyUrl(enc, termType) {
+      const sortParam = document.getElementById('chk-recent').checked ? '&sort=newest' : '&sort=best';
+      if (termType === 'specific') {
+        return 'https://www.gettyimages.com/search/2/image?phrase=' + enc + '&family=editorial' + sortParam;
+      } else if (termType === 'generic') {
+        return 'https://www.gettyimages.com/search/2/image?phrase=' + enc + '&family=creative' + sortParam;
+      } else {
+        // conceptual + direct search: both families
+        return 'https://www.gettyimages.com/search/2/image?phrase=' + enc + sortParam;
+      }
+    }
+
+    function openSources(q, termType) {
+      const enc = encodeURIComponent(q);
+      const targets = [];
+      const skipsWires = termType === 'generic' || termType === 'conceptual';
+
+      if (!skipsWires && document.getElementById('chk-ap').checked) {
+        targets.push({ name: 'AP Newsroom',
+          url: 'https://newsroom.ap.org/home/search?query=' + enc + '&mediaType=photo' });
+      }
+
+      if (document.getElementById('chk-getty').checked) {
+        targets.push({ name: 'Getty Images', url: buildGettyUrl(enc, termType) });
+      }
+
+      if (!skipsWires && document.getElementById('chk-reuters').checked) {
+        const reutersSort = document.getElementById('chk-recent').checked ? '&sort=newest-first' : '';
+        targets.push({ name: 'Reuters Connect',
+          url: 'https://www.reutersconnect.com/all?media-types=graphic_aud_vid_pkg_pic_txt&search=all%3A' + enc + reutersSort });
+      }
+
+      if (targets.length === 0) {
+        setStatus('Select at least one source.', '#cc4400');
+        return [];
+      }
+
+      targets.forEach(function(t, i) {
+        setTimeout(function() { window.open(t.url, '_blank'); }, i * 120);
+      });
+
+      return targets.map(function(t) { return t.name; });
+    }
+
+    // Opens every chip's sources in one staggered burst
+    function openAllChips() {
+      if (!currentItems || currentItems.length === 0) return;
+      const allUrls = [];
+      currentItems.forEach(function(item) {
+        const enc = encodeURIComponent(item.term);
+        const skipsWires = item.type === 'generic' || item.type === 'conceptual';
+        if (!skipsWires && document.getElementById('chk-ap').checked) {
+          allUrls.push('https://newsroom.ap.org/home/search?query=' + enc + '&mediaType=photo');
+        }
+        if (document.getElementById('chk-getty').checked) {
+          allUrls.push(buildGettyUrl(enc, item.type));
+        }
+        if (!skipsWires && document.getElementById('chk-reuters').checked) {
+          const reutersSort = document.getElementById('chk-recent').checked ? '&sort=newest-first' : '';
+          allUrls.push('https://www.reutersconnect.com/all?media-types=graphic_aud_vid_pkg_pic_txt&search=all%3A' + enc + reutersSort);
+        }
+      });
+      allUrls.forEach(function(url, i) {
+        setTimeout(function() { window.open(url, '_blank'); }, i * 120);
+      });
+      if (allUrls.length) setStatus('Opening ' + allUrls.length + ' tabs…', '#3aaa5c');
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function setStatus(msg, color) {
+      const el = document.getElementById('status');
+      el.textContent = msg;
+      el.style.color = color || '#3aaa5c';
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    updateKeyUI();
+  </script>
+</body>
+</html>
