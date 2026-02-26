@@ -484,6 +484,29 @@
     }
 
     .btn-save:hover { background: var(--accent-hover); }
+
+    .provider-toggle {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 20px;
+    }
+
+    .provider-btn {
+      flex: 1;
+      padding: 7px 12px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.12s;
+      font-family: inherit;
+    }
+
+    .provider-btn:hover { border-color: #aaa; color: var(--text); }
+    .provider-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
   </style>
 </head>
 <body>
@@ -493,11 +516,14 @@
     <div class="modal">
       <h2>Settings</h2>
 
-      <p class="modal-section-label">Claude API Key</p>
-      <p class="modal-hint">
-        Stored only in your browser. Sent directly to Anthropic — nowhere else.
-        Get a key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>.
-      </p>
+      <p class="modal-section-label">AI Provider</p>
+      <div class="provider-toggle">
+        <button class="provider-btn" id="btn-anthropic" onclick="setProvider('anthropic')">Anthropic (Claude)</button>
+        <button class="provider-btn" id="btn-openai" onclick="setProvider('openai')">OpenAI (GPT-4o)</button>
+      </div>
+
+      <p class="modal-section-label">API Key</p>
+      <p class="modal-hint" id="key-hint"></p>
       <input type="password" id="key-input" placeholder="sk-ant-…">
 
       <p class="modal-section-label">Style Preferences</p>
@@ -560,7 +586,7 @@
     </div>
 
     <div id="no-key-notice" class="no-key-notice" style="display:none">
-      <a onclick="openModal()">Add a Claude API key</a> to enable suggestions.
+      <a onclick="openModal()">Add an API key</a> to enable suggestions.
     </div>
 
     <hr class="divider">
@@ -583,8 +609,10 @@
 
   <script>
     // ── Storage keys ─────────────────────────────────────────────────────────
-    const KEY_STORAGE      = 'wire_photo_claude_key';
-    const STYLE_STORAGE    = 'wire_photo_style_prefs';
+    const KEY_STORAGE        = 'wire_photo_claude_key';
+    const OPENAI_KEY_STORAGE = 'wire_photo_openai_key';
+    const PROVIDER_STORAGE   = 'wire_photo_provider';
+    const STYLE_STORAGE      = 'wire_photo_style_prefs';
 
     // ── Default style prefs (used until user saves their own) ─────────────────
     const DEFAULT_STYLE_PREFS =
@@ -640,9 +668,42 @@ GOOD EXAMPLES OF THE RIGHT FEEL:
     }
 
     // ── Settings modal ────────────────────────────────────────────────────────
-    function getKey() { return localStorage.getItem(KEY_STORAGE) || ''; }
+    function getProvider() { return localStorage.getItem(PROVIDER_STORAGE) || 'anthropic'; }
+
+    function getKey() {
+      return getProvider() === 'openai'
+        ? (localStorage.getItem(OPENAI_KEY_STORAGE) || '')
+        : (localStorage.getItem(KEY_STORAGE) || '');
+    }
+
+    function updateProviderUI(p) {
+      document.getElementById('btn-anthropic').classList.toggle('active', p === 'anthropic');
+      document.getElementById('btn-openai').classList.toggle('active', p === 'openai');
+      if (p === 'openai') {
+        document.getElementById('key-hint').innerHTML = 'Stored only in your browser. Get a key at <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a>.';
+        document.getElementById('key-input').placeholder = 'sk-…';
+      } else {
+        document.getElementById('key-hint').innerHTML = 'Stored only in your browser. Get a key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>.';
+        document.getElementById('key-input').placeholder = 'sk-ant-…';
+      }
+    }
+
+    function setProvider(p) {
+      const currentKey = document.getElementById('key-input').value.trim();
+      const currentProvider = getProvider();
+      if (currentKey) {
+        localStorage.setItem(currentProvider === 'openai' ? OPENAI_KEY_STORAGE : KEY_STORAGE, currentKey);
+      }
+      localStorage.setItem(PROVIDER_STORAGE, p);
+      updateProviderUI(p);
+      document.getElementById('key-input').value = p === 'openai'
+        ? (localStorage.getItem(OPENAI_KEY_STORAGE) || '')
+        : (localStorage.getItem(KEY_STORAGE) || '');
+    }
 
     function openModal() {
+      const p = getProvider();
+      updateProviderUI(p);
       document.getElementById('key-input').value = getKey();
       document.getElementById('style-input').value = getStylePrefs();
       document.getElementById('modal').classList.add('open');
@@ -656,7 +717,8 @@ GOOD EXAMPLES OF THE RIGHT FEEL:
     function saveSettings() {
       const k = document.getElementById('key-input').value.trim();
       const s = document.getElementById('style-input').value.trim();
-      if (k) localStorage.setItem(KEY_STORAGE, k);
+      const provider = getProvider();
+      if (k) localStorage.setItem(provider === 'openai' ? OPENAI_KEY_STORAGE : KEY_STORAGE, k);
       if (s) localStorage.setItem(STYLE_STORAGE, s);
       updateKeyUI();
       closeModal();
@@ -665,7 +727,12 @@ GOOD EXAMPLES OF THE RIGHT FEEL:
 
     function updateKeyUI() {
       const hasKey = !!getKey();
-      document.getElementById('no-key-notice').style.display = hasKey ? 'none' : 'block';
+      const provider = getProvider();
+      const notice = document.getElementById('no-key-notice');
+      notice.style.display = hasKey ? 'none' : 'block';
+      if (!hasKey) {
+        notice.innerHTML = '<a onclick="openModal()">Add an API key</a> to enable suggestions.';
+      }
       document.getElementById('settings-label').textContent = '⚙ Settings';
     }
 
@@ -724,18 +791,7 @@ GOOD EXAMPLES OF THE RIGHT FEEL:
         : '';
 
       try {
-        const res = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': key,
-            'anthropic-version': '2023-06-01',
-            'anthropic-dangerous-direct-browser-access': 'true'
-          },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-5',
-            max_tokens: 900,
-            system: `You are a photo editor at a business publication with deep, current knowledge of executives, politicians, and public figures worldwide.
+        const systemPrompt = `You are a photo editor at a business publication with deep, current knowledge of executives, politicians, and public figures worldwide.
 Today's date is ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}. Your training data has a cutoff, so named individuals who took on a new role in approximately the last 12 months may be outdated or unknown to you. When you are not confident a named person is still in the role you are attributing to them, set "verify": true on that item so the user knows to double-check.
 
 For each headline, return exactly 5 search terms across two types — choose the right balance for the story:
@@ -796,20 +852,59 @@ Return ONLY a valid JSON array of exactly 5 objects with these fields:
   "verify" – true if this is a named person whose current role you are not fully confident about (omit or false otherwise)
 
 Example: [{"term":"Ted Sarandos","type":"specific","reason":"Netflix co-CEO, likely in earnings or press conference coverage."},{"term":"office worker laptop from behind","type":"generic","reason":"Illustrative of remote work without showing a face."},{"term":"Carlos Tavares","type":"specific","reason":"Former Stellantis CEO — verify if still current.","verify":true}]
-No explanation, no markdown, no code fences.`,
-            messages: [
-              { role: 'user', content: 'Headline: "' + headline + '"' + previousNote }
-            ]
-          })
-        });
+No explanation, no markdown, no code fences.`;
 
-        if (!res.ok) {
-          const err = await res.json().catch(function() { return {}; });
-          throw new Error(err?.error?.message || 'API error ' + res.status);
+        let raw;
+        const provider = getProvider();
+
+        if (provider === 'openai') {
+          const res = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + key
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o',
+              max_tokens: 900,
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: 'Headline: "' + headline + '"' + previousNote }
+              ]
+            })
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(function() { return {}; });
+            throw new Error(err?.error?.message || 'API error ' + res.status);
+          }
+          const data = await res.json();
+          raw = (data?.choices?.[0]?.message?.content || '').trim();
+        } else {
+          const res = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': key,
+              'anthropic-version': '2023-06-01',
+              'anthropic-dangerous-direct-browser-access': 'true'
+            },
+            body: JSON.stringify({
+              model: 'claude-sonnet-4-5',
+              max_tokens: 900,
+              system: systemPrompt,
+              messages: [
+                { role: 'user', content: 'Headline: "' + headline + '"' + previousNote }
+              ]
+            })
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(function() { return {}; });
+            throw new Error(err?.error?.message || 'API error ' + res.status);
+          }
+          const data = await res.json();
+          raw = (data?.content?.[0]?.text || '').trim();
         }
 
-        const data = await res.json();
-        const raw = (data?.content?.[0]?.text || '').trim();
         const jsonMatch = raw.match(/\[[\s\S]*\]/);
         const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
 

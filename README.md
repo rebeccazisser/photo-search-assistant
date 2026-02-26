@@ -1,4 +1,4 @@
-# photo-search-assistant
+# Photo Search Assistant
 
 An AI-powered photo search tool for newsrooms. Paste in a headline or story description, pick a story type, and get smart search term suggestions — routed directly to AP Newsroom, Getty Images, and Reuters Connect.
 
